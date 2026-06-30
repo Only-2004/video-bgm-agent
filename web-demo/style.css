@@ -859,6 +859,47 @@ body {
     transition: width 0.2s linear;
 }
 
+/* ---- 反馈按钮 ---- */
+.card-feedback {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    justify-content: flex-end;
+}
+
+.feedback-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-muted, #b0a0a0);
+    padding: 0;
+}
+
+.feedback-btn:hover {
+    border-color: var(--primary, #d4919a);
+    color: var(--primary, #d4919a);
+    transform: scale(1.1);
+}
+
+.feedback-btn.liked {
+    background: rgba(212, 145, 154, 0.15);
+    border-color: var(--primary, #d4919a);
+    color: var(--primary, #d4919a);
+}
+
+.feedback-btn.disliked {
+    background: rgba(160, 160, 160, 0.15);
+    border-color: #999;
+    color: #999;
+}
+
 .card-body {
     padding: 16px;
     background: rgba(255, 255, 255, 0.85);

@@ -8,6 +8,8 @@ import sys
 import traceback
 from typing import Any
 from config import LIBRARY_PATH, UPLOAD_DIR
+from services.taste_profile import record_interaction, get_taste_profile, compute_score_boost
+from services.segment_recommender import recommend_segments
 
 # ──────────────────────────────────────────
 # 动态导入（延迟加载，避免循环依赖）
@@ -315,15 +317,27 @@ async def score_and_rank(candidate_ids: list, video_analysis_id: str = "") -> di
                 else:
                     item["fine_score"] = 0.5
 
+        # 加载用户 taste profile 计算个性化加分
+        profile = get_taste_profile("default")
+
         recommendations = []
         for item in ranked:
             track = item.get("track", item)
+            base_score = item.get("fine_score", item.get("score", 0.5))
+            if not isinstance(base_score, (int, float)):
+                base_score = 0.5
+
+            # 个性化加分（0.0 ~ 0.3）
+            taste_boost = compute_score_boost(profile, track)
+            final_score = base_score * 0.7 + taste_boost * 0.3 if taste_boost > 0 else base_score
+
             recommendations.append({
                 "rank": item.get("fine_rank", item.get("rank", 1)),
                 "bgm_id": track.get("id", ""),
                 "title": track.get("title", ""),
                 "artist": track.get("artist", ""),
-                "score": item.get("fine_score", item.get("score", 0.5)),
+                "score": round(final_score, 3),
+                "taste_boost": round(taste_boost, 3),
                 "reason": item.get("fine_reason", item.get("reason", "")),
                 "recommended_start_sec": item.get("recommended_start_sec", 0),
                 "preview_url": track.get("preview_url", track.get("audio_file", "")),
@@ -373,6 +387,55 @@ async def detect_conflict(bgm_id: str, video_analysis_id: str = "", recommended_
         }
     except Exception as e:
         return {"bgm_id": bgm_id, "has_conflict": False, "error": str(e)}
+
+
+@_register
+async def record_feedback(bgm_id: str, action: str, user_id: str = "default",
+                          genre: str = "", mood: str = "",
+                          energy: float = 0.5, vocal_ratio: float = 0.0) -> dict:
+    """记录用户对 BGM 的反馈（喜欢/跳过/选择等），用于个性化推荐"""
+    try:
+        valid_actions = ("select", "like", "skip", "dislike", "change", "preview")
+        if action not in valid_actions:
+            return {"error": f"无效的 action: {action}，可选: {', '.join(valid_actions)}"}
+
+        record_interaction(
+            user_id=user_id, bgm_id=bgm_id, action=action,
+            genre=genre, mood=mood, energy=energy, vocal_ratio=vocal_ratio,
+        )
+        profile = get_taste_profile(user_id)
+        return {
+            "status": "ok",
+            "action": action,
+            "interaction_count": profile["interaction_count"],
+        }
+    except Exception as e:
+        return {"error": f"记录反馈失败: {str(e)}"}
+
+
+@_register
+async def segment_recommend(video_analysis_id: str = "", max_segments: int = 3) -> dict:
+    """将视频分段，每段独立推荐最匹配的 BGM"""
+    try:
+        video_analysis = {}
+        if video_analysis_id and video_analysis_id in analysis_tasks:
+            video_analysis = analysis_tasks[video_analysis_id]
+
+        if not video_analysis:
+            return {"error": "未找到视频分析结果，请先调用 analyze_video"}
+
+        # 加载曲库作为候选
+        if not os.path.isfile(LIBRARY_PATH):
+            return {"error": f"曲库文件不存在: {LIBRARY_PATH}", "segments": []}
+
+        with open(LIBRARY_PATH, "r", encoding="utf-8") as f:
+            library = json.load(f)
+        tracks = library if isinstance(library, list) else library.get("bgm_list", library.get("tracks", []))
+
+        segments = recommend_segments(video_analysis, tracks, max_segments=max_segments)
+        return {"segments": segments}
+    except Exception as e:
+        return {"error": f"分段推荐失败: {str(e)}", "segments": []}
 
 
 TOOL_NAME_MAP = {fn.__name__: fn for fn in TOOL_EXECUTORS.values()}

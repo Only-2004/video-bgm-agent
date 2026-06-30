@@ -18,6 +18,15 @@ SYSTEM_PROMPT = """你是画境生音 AI 配乐助手，你精通视频分析、
 - adjust_volume 和 detect_conflict 是可选工具，只有在用户明确要求"调音量"或"检查冲突"时才调用
 - 禁止在标准流程中自动调用 adjust_volume 或 detect_conflict
 
+## 分段推荐
+- 当视频较长（>15秒）或包含明显情绪转折时，在 score_and_rank 之后主动调用 segment_recommend 为用户提供分段配乐方案
+- 分段推荐结果和整体推荐一起展示给用户
+
+## 个性化与反馈
+- 推荐结果中如果包含 taste_boost > 0，说明该推荐考虑了用户历史偏好
+- 用户说"喜欢""不错" → 调用 record_feedback(bgm_id, action="like")
+- 用户说"不喜欢""换一首" → 调用 record_feedback(bgm_id, action="dislike" 或 "change")
+
 ## 多轮对话规则（用户再次输入时）
 - 用户说"换一首"或"换一批" → 直接调用 search_bgm（使用已有的视频分析结果），不要重新 analyze_video
 - 用户说"换一个更XX风格的" → 调用 search_bgm 带上对应的 mood/genre 参数，不要重新 analyze_video
@@ -147,6 +156,67 @@ TOOL_DEFINITIONS = [
                     }
                 },
                 "required": ["bgm_id", "video_analysis_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "record_feedback",
+            "description": "记录用户对BGM的反馈（喜欢/跳过/选择等），用于学习用户偏好，优化后续推荐。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "bgm_id": {
+                        "type": "string",
+                        "description": "BGM ID"
+                    },
+                    "action": {
+                        "type": "string",
+                        "description": "用户行为",
+                        "enum": ["select", "like", "skip", "dislike", "change", "preview"]
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "description": "用户ID",
+                        "default": "default"
+                    },
+                    "genre": {
+                        "type": "string",
+                        "description": "BGM风格"
+                    },
+                    "mood": {
+                        "type": "string",
+                        "description": "BGM情绪"
+                    },
+                    "energy": {
+                        "type": "number",
+                        "description": "BGM能量值 0-1"
+                    }
+                },
+                "required": ["bgm_id", "action"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "segment_recommend",
+            "description": "将视频按情绪转折点分成多段，每段独立推荐最匹配的BGM。适用于较长视频或情绪变化明显的视频。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "video_analysis_id": {
+                        "type": "string",
+                        "description": "视频分析结果ID"
+                    },
+                    "max_segments": {
+                        "type": "integer",
+                        "description": "最大分段数",
+                        "default": 3
+                    }
+                },
+                "required": ["video_analysis_id"]
             }
         }
     }

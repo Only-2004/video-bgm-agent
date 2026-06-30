@@ -65,6 +65,48 @@ function normalizeRec(rec) {
     };
 }
 
+// ---- 反馈功能 ----
+function sendFeedback(bgmId, action, extra) {
+    var payload = Object.assign({
+        user_id: 'default',
+        bgm_id: bgmId,
+        action: action,
+    }, extra || {});
+    fetch(API_BASE + '/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).catch(function(err) { console.warn('反馈发送失败:', err); });
+}
+
+function toggleLike(index, event) {
+    event.stopPropagation();
+    var recs = window.bgmRecommendations || [];
+    if (index >= recs.length) return;
+    var rec = normalizeRec(recs[index]);
+    var btn = event.currentTarget;
+    var isLiked = btn.classList.contains('liked');
+    btn.classList.toggle('liked');
+    btn.classList.remove('disliked');
+    sendFeedback(rec.bgm_id || rec.title, isLiked ? 'skip' : 'like', {
+        genre: rec.genre || '', mood: '', energy: rec.energy || 0.5
+    });
+}
+
+function toggleDislike(index, event) {
+    event.stopPropagation();
+    var recs = window.bgmRecommendations || [];
+    if (index >= recs.length) return;
+    var rec = normalizeRec(recs[index]);
+    var btn = event.currentTarget;
+    var isDisliked = btn.classList.contains('disliked');
+    btn.classList.toggle('disliked');
+    btn.classList.remove('liked');
+    sendFeedback(rec.bgm_id || rec.title, isDisliked ? 'skip' : 'dislike', {
+        genre: rec.genre || '', mood: '', energy: rec.energy || 0.5
+    });
+}
+
 // ---- 内联 BGM 试听 ----
 function togglePreview(event, index) {
     event.stopPropagation();
@@ -491,6 +533,14 @@ function renderBGMList(bgmList) {
                     <div class="preview-progress-bar" id="preview-bar-${i}"></div>
                 </div>
                 ${hintHtml}
+                <div class="card-feedback">
+                    <button class="feedback-btn like-btn" onclick="toggleLike(${i}, event)" title="喜欢">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                    </button>
+                    <button class="feedback-btn dislike-btn" onclick="toggleDislike(${i}, event)" title="不喜欢">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10zM17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
+                    </button>
+                </div>
             </div>
         </div>`;
     }).join('');
@@ -686,6 +736,11 @@ function selectBGM(index) {
     if (card) card.classList.add('selected');
     selectedBGM = normalizeRec(window.bgmRecommendations[index]);
 
+    // 发送选择反馈
+    sendFeedback(selectedBGM.bgm_id || selectedBGM.title, 'select', {
+        genre: selectedBGM.genre || '', energy: selectedBGM.energy || 0.5
+    });
+
     showPage('page-preview');
 
     const bgm = selectedBGM;
@@ -716,6 +771,12 @@ function selectBGM(index) {
 
 // ---- Preview Controls ----
 function switchBGM() {
+    // 发送换一首反馈
+    if (selectedBGM) {
+        sendFeedback(selectedBGM.bgm_id || selectedBGM.title, 'change', {
+            genre: selectedBGM.genre || '', energy: selectedBGM.energy || 0.5
+        });
+    }
     const bgmAudio = document.getElementById('bgm-audio');
     const mainVideo = document.getElementById('main-video');
     if (bgmAudio) { bgmAudio.pause(); bgmAudio.src = ''; }
@@ -1025,6 +1086,8 @@ function getAgentToolText(tool) {
         'score_and_rank': 'AI 正在精排序候选...',
         'adjust_volume': 'AI 正在调整音量...',
         'detect_conflict': 'AI 正在检测冲突...',
+        'record_feedback': 'AI 正在记录偏好...',
+        'segment_recommend': 'AI 正在分析视频分段...',
     };
     return texts[tool] || 'AI 正在分析...';
 }
@@ -1036,6 +1099,8 @@ function getAgentResultText(tool) {
         'score_and_rank': '精排序完成',
         'adjust_volume': '音量调整完成',
         'detect_conflict': '冲突检测完成',
+        'record_feedback': '偏好已记录',
+        'segment_recommend': '分段推荐完成',
     };
     return texts[tool] || '分析完成';
 }

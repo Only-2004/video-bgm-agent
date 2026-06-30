@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from routers import upload, learn, agent_route
+from routers import upload, learn, agent_route, feedback
 from config import AUDIO_DIR
 import os
 
@@ -19,6 +19,7 @@ app.add_middleware(
 app.include_router(upload.router)
 app.include_router(learn.router)
 app.include_router(agent_route.router)
+app.include_router(feedback.router)
 
 # Serve frontend static files
 WEB_DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../web-demo")
