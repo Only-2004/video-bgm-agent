@@ -1,0 +1,194 @@
+// ======== Agent FC 模式：SSE 流式分析 ========
+let agentSessionId = null;
+
+async function startAgentAnalysis() {
+    var file = window.selectedFile;
+    if (!file) return;
+    showPage('page-progress');
+    try {
+        updateProgress(10, '正在上传视频...');
+        var formData = new FormData();
+        formData.append('video', file);
+        var uploadResp = await fetch(API_BASE + '/api/upload', { method: 'POST', body: formData });
+        if (!uploadResp.ok) throw new Error('上传失败');
+        var uploadData = await uploadResp.json();
+        videoId = uploadData.video_id;
+        updateProgress(15, 'AI 助手启动中...');
+        var resp = await fetch(API_BASE + '/api/agent/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_id: videoId, file_path: uploadData.file_path })
+        });
+        if (!resp.ok) throw new Error('Agent 分析启动失败');
+        if (!resp.body) throw new Error('无响应流');
+        var reader = resp.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = '';
+        var finalResult = null;
+        while (true) {
+            var result = await reader.read();
+            if (result.done) break;
+            buffer += decoder.decode(result.value, { stream: true });
+            var lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (var li = 0; li < lines.length; li++) {
+                var line = lines[li];
+                if (line.indexOf('data: ') !== 0) continue;
+                var jsonStr = line.slice(6).trim();
+                if (!jsonStr) continue;
+                try {
+                    var event = JSON.parse(jsonStr);
+                    switch (event.type) {
+                        case 'tool_call':
+                            updateProgress(25, getAgentToolText(event.tool));
+                            break;
+                        case 'tool_result':
+                            updateProgress(50, getAgentResultText(event.tool));
+                            if (event.tool === 'analyze_video' && event.result && event.result.raw_analysis) {
+                                currentAnalysis = event.result.raw_analysis;
+                            }
+                            break;
+                        case 'final':
+                            finalResult = event;
+                            if (event.recommendations && event.recommendations.length > 0) {
+                                window.bgmRecommendations = event.recommendations;
+                            }
+                            updateProgress(100, '分析完成！');
+                            await showAgentResults(event);
+                            break;
+                        case 'error':
+                            throw new Error(event.message);
+                    }
+                } catch (parseErr) {
+                    if (String(parseErr.message) !== '分析完成！') {
+                        console.warn('解析跳过:', jsonStr ? jsonStr.substring(0, 80) : '');
+                    }
+                }
+            }
+        }
+        if (!finalResult) throw new Error('Agent 未返回结果');
+    } catch (err) {
+        alert('分析失败: ' + err.message);
+        showPage('page-upload');
+    }
+}
+
+function getAgentToolText(tool) {
+    var texts = {
+        'analyze_video': 'AI 正在分析画面内容...',
+        'search_bgm': 'AI 正在搜索曲库...',
+        'score_and_rank': 'AI 正在精排序候选...',
+        'adjust_volume': 'AI 正在调整音量...',
+        'detect_conflict': 'AI 正在检测冲突...',
+    };
+    return texts[tool] || 'AI 正在分析...';
+}
+
+function getAgentResultText(tool) {
+    var texts = {
+        'analyze_video': '画面分析完成',
+        'search_bgm': '曲库搜索完成',
+        'score_and_rank': '精排序完成',
+        'adjust_volume': '音量调整完成',
+        'detect_conflict': '冲突检测完成',
+    };
+    return texts[tool] || '分析完成';
+}
+
+async function showAgentResults(event) {
+    showPage('page-result');
+    await sleep(350);
+    var content = event.content || '';
+    document.getElementById('ai-description').innerHTML =
+        '<div style="font-size:14px;line-height:1.7;color:var(--text);">' + content.replace(/\n/g, '<br>') + '</div>';
+    document.getElementById('scene-info').innerHTML =
+        '<div style="font-size:13px;color:var(--text-muted);">由 AI 自主分析生成</div>';
+    var recs = event.recommendations || [];
+    if (recs.length === 0) {
+        document.getElementById('bgm-list').innerHTML =
+            '<div style="text-align:center;padding:20px;color:var(--text-muted);">暂无推荐 BGM</div>';
+        return;
+    }
+    renderBGMList(recs);
+    var actionsEl = document.getElementById('result-actions');
+    if (actionsEl) actionsEl.style.display = 'flex';
+    var chatBar = document.getElementById('agent-chat-bar');
+    if (chatBar) chatBar.style.display = 'flex';
+}
+
+async function sendAgentMessage() {
+    var input = document.getElementById('agent-chat-input');
+    var message = input.value.trim();
+    if (!message || !agentSessionId) return;
+    input.value = '';
+    input.disabled = true;
+    addChatMessage('user', message);
+    var thinkingEl = addChatMessage('agent', '思考中...');
+    try {
+        var resp = await fetch(API_BASE + '/api/agent/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: agentSessionId, message: message })
+        });
+        if (!resp.ok || !resp.body) throw new Error('对话请求失败');
+        var reader = resp.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = '';
+        while (true) {
+            var result = await reader.read();
+            if (result.done) break;
+            buffer += decoder.decode(result.value, { stream: true });
+            var lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (var li = 0; li < lines.length; li++) {
+                var line = lines[li];
+                if (line.indexOf('data: ') !== 0) continue;
+                var jsonStr = line.slice(6).trim();
+                if (!jsonStr) continue;
+                try {
+                    var event = JSON.parse(jsonStr);
+                    if (event.type === 'final') {
+                        thinkingEl.innerHTML = (event.content || '').replace(/\n/g, '<br>');
+                        if (event.recommendations && event.recommendations.length > 0) {
+                            window.bgmRecommendations = event.recommendations;
+                            renderBGMList(event.recommendations);
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+    } catch (err) {
+        thinkingEl.innerHTML = '错误: ' + err.message;
+    }
+    input.disabled = false;
+    input.focus();
+}
+
+function addChatMessage(role, text) {
+    var container = document.getElementById('agent-chat-messages');
+    var el = document.createElement('div');
+    el.className = 'chat-message chat-' + role;
+    el.innerHTML = text;
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    return el;
+}
+
+// Enter 发送
+(function() {
+    var origListener = document.addEventListener;
+    document.addEventListener('DOMContentLoaded', function() {
+        var chatInput = document.getElementById('agent-chat-input');
+        if (chatInput) {
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendAgentMessage();
+                }
+            });
+        }
+    });
+})();
+
+// 覆盖 startAnalysis 使用 Agent 模式
+startAnalysis = startAgentAnalysis;

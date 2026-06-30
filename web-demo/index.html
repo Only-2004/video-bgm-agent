@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>画境生音 — 视频智能配乐</title>
+    <link rel="stylesheet" href="/static/style.css?v=15">
+</head>
+<body>
+    <div class="phone-frame">
+    <!-- ========== 页面1：短视频风格首页 ========== -->
+    <section class="page active" id="page-feed" data-page="feed">
+        <!-- 顶部导航 -->
+        <div class="feed-top-nav">
+            <div class="feed-tabs">
+                <span class="feed-tab active" data-tab="0" onclick="switchTab(0)">发现</span>
+                <span class="feed-tab" data-tab="1" onclick="switchTab(1)">听见</span>
+                <span class="feed-tab" data-tab="2" onclick="switchTab(2)">直播</span>
+                <span class="feed-tab" data-tab="3" onclick="switchTab(3)">交友</span>
+                <span class="feed-tab" data-tab="4" onclick="switchTab(4)">看见</span>
+            </div>
+        </div>
+
+        <!-- 全屏视频区 -->
+        <div class="feed-video-area">
+            <video id="feed-video" class="feed-video" loop muted playsinline
+                   src="/static/feed-video.mp4?v=2"
+                   poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect fill='%231a1a1a'/%3E%3C/svg%3E">
+            </video>
+            <!-- 视频信息 -->
+            <div class="feed-video-info">
+                <div class="feed-author">
+                    <div class="feed-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <span class="feed-username">画境生音</span>
+                    <span class="feed-follow-btn">+ 关注</span>
+                </div>
+                <div class="feed-desc">用 AI 感知画面，为每一帧找到灵魂配乐</div>
+                <div class="feed-music">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    <span class="feed-music-text">画境生音 · AI 配乐</span>
+                </div>
+            </div>
+            <!-- 右侧互动按钮 -->
+            <div class="feed-actions">
+                <div class="feed-action-item">
+                    <div class="feed-action-icon">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </div>
+                    <span>912</span>
+                </div>
+                <div class="feed-action-item">
+                    <div class="feed-action-icon">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                    <span>5</span>
+                </div>
+                <div class="feed-action-item">
+                    <div class="feed-action-icon">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    </div>
+                    <span>分享</span>
+                </div>
+                <div class="feed-action-item">
+                    <div class="feed-action-icon">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                    <span>收藏</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI 助手浮动按钮 -->
+        <div class="ai-fab" id="ai-fab">
+            <img class="ai-fab-icon" src="/static/ai-icon-transparent.png" alt="AI 助手">
+        </div>
+        <div class="ai-fab-hint" id="ai-fab-hint">为此刻配一段旋律</div>
+    </section>
+
+    <!-- ========== 页面2：上传页 ========== -->
+    <section class="page" id="page-upload" data-page="upload">
+        <div class="page-inner">
+            <div class="upload-hero">
+                <h1 class="upload-title">上传你的视频</h1>
+                <p class="upload-subtitle">AI 将分析画面情绪和节奏，推荐最佳 BGM</p>
+            </div>
+            <div class="upload-area" id="upload-area" onclick="selectVideo()">
+                <div class="upload-prompt" id="upload-prompt">
+                    <div class="upload-icon-circle">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
+                    <div class="upload-text">点击或拖拽上传视频</div>
+                    <div class="upload-hint">支持 MP4 / MOV / AVI，最大 200MB</div>
+                </div>
+                <div class="video-preview" id="video-preview">
+                    <video id="preview-video" controls></video>
+                </div>
+            </div>
+            <div class="upload-bottom-options">
+                <div class="upload-option-card" onclick="selectVideo()">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span>从相册选</span>
+                </div>
+                <div class="upload-option-card">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    <span>拍一段</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="btn-analyze" disabled onclick="startAgentAnalysis()">开始分析</button>
+        </div>
+    </section>
+
+    <!-- ========== 页面3：分析进度 ========== -->
+    <section class="page" id="page-progress" data-page="progress">
+        <div class="page-inner">
+            <div class="progress-card">
+                <div class="progress-visual">
+                    <svg class="progress-ring" width="120" height="120" viewBox="0 0 120 120">
+                        <circle class="progress-ring-bg" cx="60" cy="60" r="52" fill="none" stroke="rgba(212,145,154,0.15)" stroke-width="6"/>
+                        <circle class="progress-ring-fill" id="progress-ring-fill" cx="60" cy="60" r="52" fill="none" stroke="#d4919a" stroke-width="6" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73" transform="rotate(-90 60 60)"/>
+                    </svg>
+                    <div class="progress-percent" id="progress-percent">0%</div>
+                </div>
+                <h2 class="progress-title" id="progress-title">AI 正在感知画面...</h2>
+                <div class="progress-text" id="progress-text"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== 页面4：分析结果 ========== -->
+    <section class="page" id="page-result" data-page="result">
+        <div class="page-inner page-scroll">
+            <div class="result-top-bar">
+                <button class="back-btn" onclick="goToFeed()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <span class="result-top-title">分析结果</span>
+                <div style="width:32px;"></div>
+            </div>
+            <div class="analysis-card">
+                <div class="card-header">
+                    <span class="card-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                    </span>
+                    <span class="card-title">视频场景</span>
+                </div>
+                <div class="scene-info" id="scene-info">--</div>
+            </div>
+            <div class="analysis-card">
+                <div class="card-header">
+                    <span class="card-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                    </span>
+                    <span class="card-title">AI 分析</span>
+                </div>
+                <div class="ai-description" id="ai-description"></div>
+            </div>
+            <div class="analysis-card">
+                <div class="card-header">
+                    <span class="card-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    </span>
+                    <span class="card-title">为你推荐</span>
+                </div>
+                <div class="bgm-list" id="bgm-list"></div>
+            </div>
+            <div id="result-actions" style="display:none;margin-top:20px;">
+                <button class="btn-action" onclick="handlePublish()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+                    <span>发布</span>
+                </button>
+                <button class="btn-action" onclick="handleShare()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    <span>分享</span>
+                </button>
+                <button class="btn-action" onclick="handleRegenerate()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    <span>重新生成</span>
+                </button>
+            </div>
+            <!-- Agent 多轮对话输入区 -->
+            <div class="agent-chat-bar" id="agent-chat-bar" style="display:none;margin-top:16px;">
+                <div class="agent-chat-messages" id="agent-chat-messages"></div>
+                <div class="agent-chat-input-row">
+                    <input type="text" class="agent-chat-input" id="agent-chat-input" placeholder="说句话调整推荐..." autocomplete="off">
+                    <button class="agent-chat-send" onclick="sendAgentMessage()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== 页面5：试听 ========== -->
+    <section class="page" id="page-preview" data-page="preview">
+        <div class="page-inner">
+            <div class="result-top-bar">
+                <button class="back-btn" onclick="switchBGM()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <span class="result-top-title">试听配乐</span>
+                <div style="width:32px;"></div>
+            </div>
+            <div class="video-container">
+                <video id="main-video" controls></video>
+            </div>
+            <audio id="bgm-audio" loop></audio>
+            <div class="bgm-player">
+                <div class="bgm-info" id="preview-bgm-info">--</div>
+                <div class="volume-control">
+                    <label>BGM 音量</label>
+                    <input type="range" id="volume-slider" min="0" max="100" value="80">
+                    <span id="volume-value">80%</span>
+                </div>
+            </div>
+            <div class="preview-actions">
+                <div class="preview-action-card" onclick="switchBGM()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    <span>换一首</span>
+                </div>
+                <div class="preview-action-card" onclick="handleShare()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    <span>分享</span>
+                </div>
+                <div class="preview-action-card" onclick="handlePublish()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+                    <span>发布</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 底部导航栏 -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <div class="bottom-nav-item" data-nav="feed" onclick="navTo('feed')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span>首页</span>
+        </div>
+        <div class="bottom-nav-item active" data-nav="video" onclick="navTo('feed')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <span>视频</span>
+        </div>
+        <div class="bottom-nav-item" data-nav="upload" onclick="navTo('upload')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+            <span>刷歌</span>
+        </div>
+        <div class="bottom-nav-item" data-nav="star" onclick="navTo('result')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span>星光</span>
+        </div>
+        <div class="bottom-nav-item" data-nav="mine" onclick="navTo('preview')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>我的</span>
+        </div>
+    </nav>
+    </div><!-- end phone-frame -->
+
+    <!-- 粒子画布 -->
+    <canvas id="particle-canvas"></canvas>
+
+    <script>
+    (function() {
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let w, h;
+        const particles = [];
+        const colors = ['#d4919a','#e8b8be','#a8c8d8','#c4dce8','#a8d8c8','#f0c8a0','#f5d8c0'];
+
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 6 + 3;
+                this.life = 1;
+                this.decay = Math.random() * 0.025 + 0.015;
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5 + 0.5;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotSpeed = (Math.random() - 0.5) * 0.1;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.02;
+                this.life -= this.decay;
+                this.size *= 0.99;
+                this.rotation += this.rotSpeed;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = this.life * 0.7;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i / 5) * Math.PI * 2;
+                    const r = this.size;
+                    const px = Math.cos(angle) * r;
+                    const py = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.globalAlpha = this.life * 0.3;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        let lastX = 0, lastY = 0;
+        document.addEventListener('mousemove', e => {
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const count = Math.min(Math.floor(dist / 8), 4);
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(
+                    e.clientX + (Math.random() - 0.5) * 10,
+                    e.clientY + (Math.random() - 0.5) * 10
+                ));
+            }
+            lastX = e.clientX;
+            lastY = e.clientY;
+        });
+
+        function animate() {
+            ctx.clearRect(0, 0, w, h);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+            if (particles.length > 150) particles.splice(0, particles.length - 150);
+            requestAnimationFrame(animate);
+        }
+        animate();
+    })();
+    </script>
+    <script src="/static/gsap.min.js"></script>
+    <script src="/static/app.js?v=11"></script>
+</body>
+</html>

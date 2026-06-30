@@ -1,0 +1,164 @@
+# 视频语义分析 Prompt — 统一方案
+
+你是一位资深视频剪辑师。CV算法已经提供了精确的客观数据（转场点、张力曲线、色调、音频特征），你只需要理解画面语义。
+
+## 输入数据
+
+### CV客观数据（已由算法精确计算，直接使用，不需要重新估计）:
+
+**转场点** ({num_transitions}个):
+{transitions_json}
+
+**张力曲线摘要**:
+{tension_summary}
+
+**色调情绪**:
+{color_mood_json}
+
+**视频音频特征**:
+{video_audio_json}
+
+### 关键帧图像（共{num_keyframes}帧）:
+每帧带时间戳，你需要理解画面内容和情绪。
+
+## 一致性约束（最重要）
+
+你的所有输出必须互不矛盾。具体规则：
+- 如果画面是静态风景但CV张力高，说明视频在快速运动（如跟拍滑雪），不要输出"平静"
+- 如果CV转场多(≥4)，说明视频节奏快，primary_mood 不应该是"平静"
+- video_genre 必须与 primary_mood 一致（极限运动 → 热血激昂，风景 → 平静治愈）
+- 情绪走向的每一步必须与对应时间段的CV张力数据吻合
+
+## 你的任务
+
+一次输出所有维度的分析结果。
+
+### 输出格式
+
+```json
+{
+  "visual": {
+    "scene": "室外/自然",
+    "objects": ["雪板", "雪山", "树木"],
+    "people_count": "单人",
+    "activity": "单板滑雪",
+    "color_tone": "冷色调",
+    "lighting": "自然光",
+    "visual_style": "写实"
+  },
+  "text": {
+    "has_subtitles": false,
+    "subtitle_text": "",
+    "on_screen_text": [],
+    "text_sentiment": "中性"
+  },
+  "video_description": "视频整体描述（1-2句话）",
+  "video_genre": "极限运动",
+  "scene_descriptions": [
+    {"timestamp": 0, "description": "滑雪者站在山顶准备出发"},
+    {"timestamp": 12.5, "description": "快速滑下山坡，雪雾飞溅"}
+  ],
+  "emotion_journey": "从平静 → 渐渐紧张 → 高潮爆发 → 回归温暖",
+  "overall_atmosphere": {
+    "primary_mood": "热血激昂",
+    "secondary_mood": "自由畅快",
+    "description": "视频整体节奏快，多个转场点，适合搭配有清晰高潮点的音乐"
+  },
+  "music_imagination": {
+    "recommended_styles": ["史诗", "电子摇滚", "励志"],
+    "recommended_characteristics": {
+      "energy_range": [0.6, 0.9],
+      "bpm_range": [120, 140],
+      "has_climax": true,
+      "climax_alignment_needed": true,
+      "emotion_curve_type": "高潮结尾",
+      "instrumentation_preference": ["电吉他", "合成器", "打击乐"],
+      "avoid": ["过于舒缓", "无明确节奏"]
+    },
+    "reference_description": "音乐应该在12秒左右达到第一个高潮，配合视频转场"
+  },
+  "key_matching_points": [
+    {
+      "video_timestamp": 12.5,
+      "importance": "高",
+      "reason": "第一个大转场，需要音乐高潮配合",
+      "recommended_audio_feature": "节拍重音或旋律高潮"
+    }
+  ],
+  "video_imagination": "从音乐的视角描述：这段视频渴望什么样的配乐",
+  "ideal_bgm_profile": "一段BPM 110-130的史诗风格纯音乐，前15秒用钢琴轻柔铺底，12秒转场处鼓点渐入，25秒高潮处全乐器齐奏，结尾回归温暖钢琴。整体情绪从平静走向热血，适合滑雪/极限运动画面。",
+  "narrative_arc": {
+    "arc_type": "渐强型",
+    "climax_position": 0.7,
+    "opening_mood": "平静",
+    "closing_mood": "热血激昂"
+  },
+  "scene_analysis": {
+    "scene_type": "极限运动",
+    "scene_description": "雪山滑雪场景",
+    "mood": "热血激昂",
+    "visual_energy": 0.8
+  },
+  "bgm_suggestion": {
+    "primary_emotion": "热血",
+    "energy_level": "高",
+    "style_tags": ["电子摇滚", "史诗"],
+    "reasoning": "快节奏滑雪运动需要高能量音乐支撑"
+  },
+  "rhythm_suggestion": {
+    "tempo_range": "120-140",
+    "rhythm_style": "强节奏",
+    "sync_points": "转场点对齐鼓点重音"
+  }
+}
+```
+
+### 字段说明
+
+**visual** — 画面视觉内容：
+- scene: 场景类型（室内/室外/自然/城市）
+- objects: 画面中的物体
+- people_count: 人数（无人/单人/多人）
+- activity: 主要活动
+- color_tone: 色调（暖色调/冷色调/中性）
+- lighting: 光照
+- visual_style: 画面风格
+
+**text** — 文字内容：
+- has_subtitles: 是否有字幕
+- subtitle_text: 字幕内容
+- on_screen_text: 屏幕上的文字
+- text_sentiment: 文字情感
+
+**overall_atmosphere** — 整体氛围（只输出语义描述，不输出CV已测的数值）：
+- primary_mood: 主要情绪标签
+- secondary_mood: 次要情绪标签
+- description: 一句话描述
+
+**narrative_arc** — 叙事弧线：
+- arc_type: 渐强型/爆发型/平稳型/先抑后扬型/波动型
+- climax_position: 高潮位置 (0.0=开头, 1.0=结尾)
+- opening_mood / closing_mood: 开头和结尾的情绪
+
+**key_matching_points** — 关键匹配点：
+- 结合CV张力数据判断哪些转场点最需要音乐配合
+- 张力 > 0.7 → 重要性"高"，0.4-0.7 → "中"，< 0.4 → "低"
+
+**ideal_bgm_profile** — 理想BGM的自然语言画像（用于Embedding语义检索）：
+- 描述这首理想BGM"听起来是什么样的"，而不是"视频需要什么"
+- 包含：风格、节奏、乐器、情绪弧线、开头/高潮/结尾的听感
+- 50-100字，越具体越好，便于与BGM库的feature_text做语义匹配
+- 与video_imagination的区别：video_imagination描述视频对配乐的渴望，ideal_bgm_profile描述配乐本身的听感
+
+## 分析原则
+
+1. **相信CV数据**: 转场时间戳、张力值是精确的，不要质疑或重新估计
+2. **你只做语义理解**: 画面表达什么意思、适合什么风格BGM
+3. **不要输出CV已测的字段**: energy_level / rhythm_sense / pace / transition_points / tension_curve 由CV客观计算
+4. **所有输出必须一致**: video_genre、primary_mood、narrative_arc、music_imagination 必须互相印证
+5. **音乐想象要具体**: 不要只说"激昂的音乐"，要说"BPM 120-140，有清晰高潮点的史诗风格音乐"
+
+## 输出要求
+
+**必须输出严格的JSON格式**，包含以上所有字段。
+不要有任何其他文字说明，直接输出JSON。
